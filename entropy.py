@@ -16,7 +16,11 @@ class ProcessImage(object):
 			file = cStringIO.StringIO(urllib.urlopen(self.source).read())
 			self.image = Image.open(file)
 		else:
-			self.image = Image.open(self.source)
+			try:
+				self.image = Image.open(self.source)
+			except IOError:
+				print "Cannot load image. Be sure to include http:// if loading from a website"
+				sys.exit()
 
 
 	def output(self): #Probably only print this in verbose mode in the future
