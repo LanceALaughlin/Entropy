@@ -2,6 +2,8 @@ import sys
 import os
 import getopt
 from PIL import Image
+import urllib
+import cStringIO
 
 #Class to handle image processing
 #It inherits from the generic Python object
@@ -9,7 +11,13 @@ class ProcessImage(object):
 
 	def __init__(self, source): #Pass in the argument image location
 		self.source = source
-		self.image = Image.open(self.source)
+		if 'http' in self.source:
+			print 'reading from url'
+			file = cStringIO.StringIO(urllib.urlopen(self.source).read())
+			self.image = Image.open(file)
+		else:
+			self.image = Image.open(self.source)
+
 
 	def output(self): #Probably only print this in verbose mode in the future
 		print "We're processing the image: " + self.source
