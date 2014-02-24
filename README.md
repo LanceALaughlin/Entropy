@@ -6,9 +6,11 @@ Rates wallpapers based on a variety of criteria.
 
 ##Developers
 
-1. Dustin Raimondi
-2. Chris Knepper
-3. Lance Laughlin
+[Dustin Raimondi](https://www.github.com/raimondi1337)
+
+[Chris Knepper](https://www.github.com/chrisknepper)
+
+[Lance Laughlin](https://www.github.com/ExplosiveHippo)
 
 ##Dependencies
 **Pillow:**
