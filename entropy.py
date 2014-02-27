@@ -35,7 +35,10 @@ def main(argv):
 class ProcessImage(object):
 
 	def __init__(self, source): #Pass in the argument image location
+		#get the location of the image
 		self.source = source
+
+		#determine if the image is local or hosted
 		if 'http' in self.source:
 			print 'reading from url'
 			file = cStringIO.StringIO(urllib.urlopen(self.source).read())
@@ -47,8 +50,21 @@ class ProcessImage(object):
 				print "Cannot load image. Be sure to include 'http://'' if loading from a website"
 				sys.exit()
 
+
 		r,g,b = self.image.getpixel((1, 1))
-		self.results = RGBtoK(r,g,b)
+		self.results = self.calcPixelTemp(r,g,b)
+
+	def calcPixelTemp(self,R,G,B):
+		#http://dsp.stackexchange.com/questions/8949/how-do-i-calculate-the-color-temperature-of-the-light-source-illuminating-an-ima
+		#Convert the RGB values to CIE tristimulus 3D color space codinates
+		X = ((-0.14282) * B) + ((1.54924) * G) + ((-0.95641) * B)
+		Y = ((-0.32466) * R) + ((1.57837) * G) + ((-0.73191) * B) #illuminance
+		Z = ((-0.68202) * R) + ((0.77073) * G) + ((0.56332) * B)
+
+		#Compute the Combined Color Temperature
+		n=((0.23881) * R+(0.25499) * G+(-0.58291) * B) / ((0.11109) * R+(-0.85406) * G+(0.52289) * B)
+		CCT = (449 * (n**3)) + (3525 * (n**2) + (6823.3 * n) + 5520.33)
+		return CCT
 
 	def output(self): #Probably only print this in verbose mode in the future
 		print "We're processing the image: " + self.source
@@ -56,27 +72,7 @@ class ProcessImage(object):
 		print "Image Size: "
 		print self.image.size
 		print "Color Temp of First Pixel: "
-		print self.results.calcTemp()
-
-
-
-#http://dsp.stackexchange.com/questions/8949/how-do-i-calculate-the-color-temperature-of-the-light-source-illuminating-an-ima
-class RGBtoK(object):
-	def __init__(self,r,g,b):
-		self.R=r
-		self.B=b
-		self.G=g
-
-	def calcTemp(self):
-		#Convert the RGB values to CIE tristimulus 3D color space codinates
-		X = ((-0.14282) * self.B) + ((1.54924) * self.G) + ((-0.95641) * self.B)
-		Y = ((-0.32466) * self.R) + ((1.57837) * self.G) + ((-0.73191) * self.B) #illuminance
-		Z = ((-0.68202) * self.R) + ((0.77073) * self.G) + ((0.56332) * self.B)
-
-		#Compute the Combined Color Temperature
-		n=((0.23881) * self.R+(0.25499) * self.G+(-0.58291) * self.B) / ((0.11109) * self.R+(-0.85406) * self.G+(0.52289) * self.B)
-		CCT = (449 * (n**3)) + (3525 * (n**2) + (6823.3 * n) + 5520.33)
-		return CCT
+		print self.results
 
 #Python needs this to instantiate the program properly when it's executed from the command line
 if __name__ == '__main__':
