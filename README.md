@@ -16,3 +16,7 @@ Rates wallpapers based on a variety of criteria.
 **Pillow:**
 
 https://pypi.python.org/pypi/Pillow/
+
+**libjpeg-dev:**
+
+http://libjpeg.sourceforge.net/
