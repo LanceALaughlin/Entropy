@@ -47,6 +47,29 @@ class ProcessImage(object):
 				sys.exit()
 		self.imageWidth, self.imageHeight = self.image.size
 
+	def calcPixelTemp(self,RGB):
+		R,G,B=RGB
+		#http://dsp.stackexchange.com/questions/8949/how-do-i-calculate-the-color-temperature-of-the-light-source-illuminating-an-ima
+		#Convert the RGB values to CIE tristimulus 3D color space coordinates
+		X = ((-0.14282) * B) + ((1.54924) * G) + ((-0.95641) * B)
+		Y = ((-0.32466) * R) + ((1.57837) * G) + ((-0.73191) * B) #illuminance
+		Z = ((-0.68202) * R) + ((0.77073) * G) + (( 0.56332) * B)
+		#Compute the Combined Color Temperature
+		numerator =((0.23881) * R+(0.25499) * G+(-0.58291) * B)
+		denominator = ((0.11109) * R+(-0.85406) * G+(0.52289) * B)
+
+		if denominator == 0:
+			CCT=0
+		else:
+			n=numerator/denominator
+			CCT = (449 * (n**3)) + (3525 * (n**2) + (6823.3 * n) + 5520.33)
+		
+		return CCT
+	def output(self): #Probably only print this in verbose mode in the future
+		print '\033[0m' + "We're processing the image:" + self.source
+		print '\033[0m' + "This", self.image.mode, "image is in the", self.image.format, "format"
+		print '\033[0m' + "Image Size:", self.imageWidth, ",", self.imageHeight
+
 		try:
 			print '\033[95m' + "White: Pixel (0,0) color temp:", self.calcPixelTemp(self.image.getpixel((0,0)))
 		except:
@@ -66,21 +89,7 @@ class ProcessImage(object):
 			print '\033[93m' + "Black: Pixel (1,1) color temp:", self.calcPixelTemp(self.image.getpixel((1,1)))
 		except:
 			print '\033[93m' + "Black: Pixel (1,1) fails to calculate"
-	def calcPixelTemp(self,RGB):
-		R,G,B=RGB
-		#http://dsp.stackexchange.com/questions/8949/how-do-i-calculate-the-color-temperature-of-the-light-source-illuminating-an-ima
-		#Convert the RGB values to CIE tristimulus 3D color space coordinates
-		X = ((-0.14282) * B) + ((1.54924) * G) + ((-0.95641) * B)
-		Y = ((-0.32466) * R) + ((1.57837) * G) + ((-0.73191) * B) #illuminance
-		Z = ((-0.68202) * R) + ((0.77073) * G) + (( 0.56332) * B)
-		#Compute the Combined Color Temperature
-		n=((0.23881) * R+(0.25499) * G+(-0.58291) * B) / ((0.11109) * R+(-0.85406) * G+(0.52289) * B)
-		CCT = (449 * (n**3)) + (3525 * (n**2) + (6823.3 * n) + 5520.33)
-		return CCT
-	def output(self): #Probably only print this in verbose mode in the future
-		print '\033[0m' + "We're processing the image:" + self.source
-		print '\033[0m' + "This", self.image.mode, "image is in the", self.image.format, "format"
-		print '\033[0m' + "Image Size:", self.imageWidth, ",", self.imageHeight
+
 #Python needs this to instantiate the program properly when it's executed from the command line
 if __name__ == '__main__':
     main(sys.argv[1:])
