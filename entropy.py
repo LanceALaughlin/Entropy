@@ -4,10 +4,11 @@ import getopt
 from PIL import Image, ImageStat
 import urllib
 import cStringIO
+import gtk, pygtk
 
 def main(argv):
 	image = None
-
+	
 	try:
 		opts, args = getopt.getopt(argv, "hiv:d", ["help", "image=", "verbose"])
 	except getopt.GetoptError:
@@ -81,6 +82,13 @@ class ProcessImage(object):
 			CCT = (449 * (n**3)) + (3525 * (n**2) + (6823.3 * n) + 5520.33)
 
 		return CCT
+
+	def calcScreenSize(self):
+		window = gtk.Window()
+		screen = window.get_screen()
+		print "width = " + str(screen.get_width()) + ", height = " + str(screen.get_height())
+
+
 	def output(self): #Probably only print this in verbose mode in the future
 		print '\033[0m' + "We're processing the image:" + self.source
 		print '\033[0m' + "This", self.image.mode, "image is in the", self.image.format, "format"
@@ -91,6 +99,7 @@ class ProcessImage(object):
 		print '\033[91m' + "Red:\tPixel (1,0) color temp:", self.calcPixelTemp(self.image.getpixel((1,0)))
 		print '\033[93m' + "Black: \tPixel (1,1) color temp:", self.calcPixelTemp(self.image.getpixel((1,1)))
 		print "Average Image Temperature:", self.calcImageTemp()
+		print "Screen Resolution:",self.calcScreenSize()
 		
 
 #Python needs this to instantiate the program properly when it's executed from the command line
