@@ -68,7 +68,7 @@ class ProcessImage(object):
 		totalTemp = 0
 		for row in range(self.imageWidth):
 			for col in range(self.imageHeight):
-				totalTemp+=self.calcPixelTemp(self.image.getpixel((col,row)))
+				totalTemp+=self.calcPixelTemp(self.image.getpixel((row,col)))
 
 		return totalTemp/(self.imageWidth*self.imageHeight)
 
@@ -94,10 +94,10 @@ class ProcessImage(object):
 		return CCT
 
 	def compareScreenSize(self):
-		if(self.screenWidth is not self.imageWidth or self.screenHeight is not self.imageHeight):
-			return "The image is not the same as the screen resolution."
+		if(self.imageWidth < self.screenWidth or self.imageHeight < self.screenHeight):
+			return "The image is smaller than the the screen resolution."
 		else:
-			return "The image is the same as the screen resolution! :)"
+			return "The image is at least as big as the screen resolution! :)"
 
 	def output(self): #Probably only print this in verbose mode in the future
 		print '\033[0m' + "We're processing the image:" + self.source
