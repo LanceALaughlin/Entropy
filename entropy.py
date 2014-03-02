@@ -30,6 +30,11 @@ def main(argv):
 
 	source = "".join(args)
 
+	#Use GTK to get the screen resolution
+	window = gtk.Window()
+	global screen
+	screen = window.get_screen()
+
 	#Parse the arguments, then create a new image processor object with the value of the -i or --image argument as the image file to open
 	p = ProcessImage(source)
 	p.output()
@@ -53,7 +58,8 @@ class ProcessImage(object):
 				print "Cannot load image. Be sure to include 'http://'' if loading from a website"
 				sys.exit()
 
-		self.imageWidth, self.imageHeight = self.image.size
+		self.imageWidth, self.imageHeight = self.image.size #Set width and height, which correspond to tuple values from self.image.size
+		self.screenWidth, self.screenHeight = screen.get_width(), screen.get_height()
 
 	def calcImageScore(self):
 		return round(self.calcImageTemp()/40938*10,1)
@@ -87,11 +93,11 @@ class ProcessImage(object):
 
 		return CCT
 
-	def calcScreenSize(self):
-		window = gtk.Window()
-		screen = window.get_screen()
-		print "width = " + str(screen.get_width()) + ", height = " + str(screen.get_height())
-
+	def compareScreenSize(self):
+		if(self.screenWidth is not self.imageWidth or self.screenHeight is not self.imageHeight):
+			return "The image is not the same as the screen resolution."
+		else:
+			return "The image is the same as the screen resolution! :)"
 
 	def output(self): #Probably only print this in verbose mode in the future
 		print '\033[0m' + "We're processing the image:" + self.source
@@ -103,7 +109,8 @@ class ProcessImage(object):
 		print '\033[91m' + "Red:\tPixel (1,0) color temp:", self.calcPixelTemp(self.image.getpixel((1,0)))
 		print '\033[93m' + "Black: \tPixel (1,1) color temp:", self.calcPixelTemp(self.image.getpixel((1,1)))
 		print "Average Image Temperature:", self.calcImageTemp()
-		print "Screen Resolution:",self.calcScreenSize()
+		print "Screen Resolution: width = " + str(self.screenWidth) + ", height = " + str(self.screenHeight)
+		print "Screen Size vs. Image Size: " + self.compareScreenSize()
 		print "Image Score:", self.calcImageScore(),"/ 10"
 	
 
