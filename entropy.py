@@ -55,11 +55,15 @@ class ProcessImage(object):
 
 		self.imageWidth, self.imageHeight = self.image.size
 
+	def calcImageScore(self):
+		return round(self.calcImageTemp()/40938*10,1)
+
 	def calcImageTemp(self):
 		totalTemp = 0
 		for row in range(self.imageWidth):
 			for col in range(self.imageHeight):
 				totalTemp+=self.calcPixelTemp(self.image.getpixel((col,row)))
+
 		return totalTemp/(self.imageWidth*self.imageHeight)
 
 	def calcPixelTemp(self,RGB):
@@ -100,7 +104,8 @@ class ProcessImage(object):
 		print '\033[93m' + "Black: \tPixel (1,1) color temp:", self.calcPixelTemp(self.image.getpixel((1,1)))
 		print "Average Image Temperature:", self.calcImageTemp()
 		print "Screen Resolution:",self.calcScreenSize()
-		
+		print "Image Score:", self.calcImageScore(),"/ 10"
+	
 
 #Python needs this to instantiate the program properly when it's executed from the command line
 if __name__ == '__main__':
