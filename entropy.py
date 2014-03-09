@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 import sys
 import os
 import getopt
@@ -10,25 +11,24 @@ def main(argv):
 	image = None
 	
 	try:
-		opts, args = getopt.getopt(argv, "hiv:d", ["help", "image=", "verbose"])
+		opts, args = getopt.getopt(argv, "hi:v", ["help", "image=", "verbose"])
 	except getopt.GetoptError:
 		usage()
 		sys.exit(2)
+
+	global _verbose
+	global _image
+	_verbose = False
+	_image = None
 
 	for opt, arg in opts:
 		if opt in ("-h", "--help"):
 			usage()
 			sys.exit()
 		elif opt in ("-v","--verbose"):
-			global _verbose
-			_verbose = 1
-		elif opt == '-d':
-			global _debug
-			_debug = 1
+			_verbose = True
 		elif opt in ("-i", "--image"):
-			image = arg  
-
-	source = "".join(args)
+			_image = arg
 
 	#Use GTK to get the screen resolution
 	window = gtk.Window()
@@ -36,8 +36,11 @@ def main(argv):
 	screen = window.get_screen()
 
 	#Parse the arguments, then create a new image processor object with the value of the -i or --image argument as the image file to open
-	p = ProcessImage(source)
+	p = ProcessImage(_image)
 	p.output()
+
+def aspectRatio(width, height):
+	return abs(round(float(width) / float(height), 2))
 
 #Class to handle image processing
 #It inherits from the generic Python object
@@ -48,13 +51,15 @@ class ProcessImage(object):
 
 		#determine if the image is local or hosted, then open it
 		if 'http' in self.source:
-			print 'reading from url'
+			if(_verbose):
+				print 'reading from url'
 			file = cStringIO.StringIO(urllib.urlopen(self.source).read())
 			self.image = Image.open(file)
 		else:
 			try:
 				self.image = Image.open(self.source)
 			except IOError:
+				print self.source
 				print "Cannot load image. Be sure to include 'http://'' if loading from a website"
 				sys.exit()
 
@@ -99,18 +104,24 @@ class ProcessImage(object):
 		else:
 			return "The image is at least as big as the screen resolution! :)"
 
-	def output(self): #Probably only print this in verbose mode in the future
-		print '\033[0m' + "We're processing the image:" + self.source
-		print '\033[0m' + "This", self.image.mode, "image is in the", self.image.format, "format"
-		print '\033[0m' + "Image Size:", self.imageWidth, ",", self.imageHeight
+	def compareAspectRatio(self):
+		return "The difference in aspect ratio between the screen resolution and the image is: "\
+		+ str(aspectRatio(self.screenWidth, self.screenHeight) - aspectRatio(self.imageWidth, self.imageHeight))
 
-		print '\033[95m' + "White: \tPixel (0,0) color temp:", self.calcPixelTemp(self.image.getpixel((0,0)))
-		print '\033[94m' + "Blue: \tPixel (0,1) color temp:", self.calcPixelTemp(self.image.getpixel((0,1)))
-		print '\033[91m' + "Red:\tPixel (1,0) color temp:", self.calcPixelTemp(self.image.getpixel((1,0)))
-		print '\033[93m' + "Black: \tPixel (1,1) color temp:", self.calcPixelTemp(self.image.getpixel((1,1)))
-		print "Average Image Temperature:", self.calcImageTemp()
-		print "Screen Resolution: width = " + str(self.screenWidth) + ", height = " + str(self.screenHeight)
-		print "Screen Size vs. Image Size: " + self.compareScreenSize()
+	def output(self): #Probably only print this in verbose mode in the future
+		if(_verbose):
+			print '\033[0m' + "We're processing the image:" + self.source
+			print '\033[0m' + "This", self.image.mode, "image is in the", self.image.format, "format"
+			print '\033[0m' + "Image Size:", self.imageWidth, ",", self.imageHeight
+
+			print '\033[95m' + "White: \tPixel (0,0) color temp:", self.calcPixelTemp(self.image.getpixel((0,0)))
+			print '\033[94m' + "Blue: \tPixel (0,1) color temp:", self.calcPixelTemp(self.image.getpixel((0,1)))
+			print '\033[91m' + "Red:\tPixel (1,0) color temp:", self.calcPixelTemp(self.image.getpixel((1,0)))
+			print '\033[93m' + "Black: \tPixel (1,1) color temp:", self.calcPixelTemp(self.image.getpixel((1,1)))
+			print "Average Image Temperature:", self.calcImageTemp()
+			print "Screen Resolution: width = " + str(self.screenWidth) + ", height = " + str(self.screenHeight)
+			print "Aspect ratio: " + self.compareAspectRatio()
+			print "Screen Size vs. Image Size: " + self.compareScreenSize()
 		print "Image Score:", self.calcImageScore(),"/ 10"
 	
 
