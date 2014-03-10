@@ -42,6 +42,9 @@ def main(argv):
 def aspectRatio(width, height):
 	return round(float(width) / float(height), 2)
 
+def numPixels(width, height):
+	return width * height
+
 #Print this help when run with the -h flag or when the user entered bad flags
 def usage():
 	print "\nEntropy is a tool to rate wallpapers based on image attributes.\n\n" + \
@@ -78,7 +81,25 @@ class ProcessImage(object):
 		self.screenWidth, self.screenHeight = screen.get_width(), screen.get_height()
 
 	def calcImageScore(self):
-		return round(self.calcImageTemp()/40938*10,1)
+		score = 0.0
+		score += min(10.0, self.calcImageTemp() * .01) #Initially base score on image temp
+
+		#Factor in size differences
+		pixelDiff = self.calcPixelDiff()
+		aspectDiff = self.calcAspectDiff()
+		i = pixelDiff
+		while(i > 0):
+			score -= .0001 #For every pixel of difference there is between image and screen res, take away this many points
+			i -= 1
+		i = aspectDiff
+		while(i > 0):
+			score -= .01 #For how big the difference in aspect ratio is, take away this many points
+			i -= 1
+
+		#Make sure we don't go above 10 or below 0
+		score = max(0.0, score)
+		score = min(10.0, score)
+		return round(score, 1) #Round to 1 decimal place
 
 	def calcImageTemp(self):
 		totalTemp = 0
@@ -109,17 +130,19 @@ class ProcessImage(object):
 
 		return CCT
 
+	def calcPixelDiff(self):
+		return abs(numPixels(self.screenWidth, self.screenHeight) - numPixels(self.imageWidth, self.imageHeight))
+
+	def calcAspectDiff(self):
+		return abs(aspectRatio(self.screenWidth, self.screenHeight) - aspectRatio(self.imageWidth, self.imageHeight))
+
 	def compareScreenSize(self):
 		if(self.imageWidth < self.screenWidth or self.imageHeight < self.screenHeight):
 			return "The image is smaller than the the screen resolution."
 		else:
 			return "The image is at least as big as the screen resolution! :)"
 
-	def compareAspectRatio(self):
-		return "The difference in aspect ratio between the screen resolution and the image is: "\
-		+ str(aspectRatio(self.screenWidth, self.screenHeight) - aspectRatio(self.imageWidth, self.imageHeight))
-
-	def output(self): #Probably only print this in verbose mode in the future
+	def output(self):
 		if(_verbose):
 			print '\033[0m' + "We're processing the image:" + self.source
 			print '\033[0m' + "This", self.image.mode, "image is in the", self.image.format, "format"
@@ -131,7 +154,7 @@ class ProcessImage(object):
 			print '\033[93m' + "Black: \tPixel (1,1) color temp:", self.calcPixelTemp(self.image.getpixel((1,1)))
 			print "Average Image Temperature:", self.calcImageTemp()
 			print "Screen Resolution: width = " + str(self.screenWidth) + ", height = " + str(self.screenHeight)
-			print "Aspect ratio: " + self.compareAspectRatio()
+			print "Aspect ratio Comparison: " + str(self.calcAspectDiff())
 			print "Screen Size vs. Image Size: " + self.compareScreenSize()
 		print "Image Score:", self.calcImageScore(),"/ 10"
 	
