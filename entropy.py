@@ -40,8 +40,19 @@ def main(argv):
 	p.output()
 
 def aspectRatio(width, height):
-	return abs(round(float(width) / float(height), 2))
+	return round(float(width) / float(height), 2)
 
+#Print this help when run with the -h flag or when the user entered bad flags
+def usage():
+	print "\nEntropy is a tool to rate wallpapers based on image attributes.\n\n" + \
+	"Usage:\n" + \
+	"=========================================\n" + \
+	"python entropy.py -i \"filename\"\n" + \
+	"Process the image (local or URL) and print a rating.\n" + \
+	"-----------------\n" + \
+	"python entropy.py -i \"filename\" -v\n" + \
+	"Process the image and print verbose technical output.\n"
+	
 #Class to handle image processing
 #It inherits from the generic Python object
 class ProcessImage(object):
