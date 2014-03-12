@@ -5,7 +5,6 @@ import getopt
 from PIL import Image, ImageStat
 import urllib
 import cStringIO
-import gtk, pygtk
 
 def main(argv):
 	image = None
@@ -30,10 +29,9 @@ def main(argv):
 		elif opt in ("-i", "--image"):
 			_image = arg
 
-	#Use GTK to get the screen resolution
-	window = gtk.Window()
+	#Pull screen data from xrandr
 	global screen
-	screen = window.get_screen()
+	screen = os.popen("xrandr -q -d :0").readlines()[0]
 
 	#Parse the arguments, then create a new image processor object with the value of the -i or --image argument as the image file to open
 	p = ProcessImage(_image)
@@ -78,43 +76,46 @@ class ProcessImage(object):
 				sys.exit()
 
 		self.imageWidth, self.imageHeight = self.image.size #Set width and height, which correspond to tuple values from self.image.size
-		self.screenWidth, self.screenHeight = screen.get_width(), screen.get_height()
+		self.screenWidth, self.screenHeight = int(screen.split()[7]), int(screen.split()[9][:-1])
 
 	def calcImageScore(self):
 		score = 0.0
-		score += min(10.0, self.calcImageTemp() * .01) #Initially base score on image temp
+		score += self.calcImageTemp() #Initially base score on average image temp
 
 		#Factor in size differences
 		pixelDiff = self.calcPixelDiff()
 		aspectDiff = self.calcAspectDiff()
-		i = pixelDiff
-		while(i > 0):
-			score -= .0001 #For every pixel of difference there is between image and screen res, take away this many points
-			i -= 1
+		if(pixelDiff > 0): #Only take away points if the screen is a higher res than the image
+			i = pixelDiff
+			while(i > 0):
+				score -= 100 #For every pixel of difference there is between image and screen res, take away this many points
+				i -= 1
 		i = aspectDiff
 		while(i > 0):
-			score -= .01 #For how big the difference in aspect ratio is, take away this many points
+			score -= 1000 #For how big the difference in aspect ratio is, take away this many points
 			i -= 1
 
-		#Make sure we don't go above 10 or below 0
+		#Make sure we don't go below 0
 		score = max(0.0, score)
-		score = min(10.0, score)
 		return round(score, 1) #Round to 1 decimal place
 
 	def calcImageTemp(self):
-		totalTemp = 0
+		totalTemp = 0.0
+		pixelCount = 0.0
 		for row in range(self.imageWidth):
 			for col in range(self.imageHeight):
-				totalTemp+=self.calcPixelTemp(self.image.getpixel((row,col)))
-
-		return totalTemp/(self.imageWidth*self.imageHeight)
+				temp = self.calcPixelTemp(self.image.getpixel((row,col)))
+				totalTemp+= temp
+				pixelCount += 1.0
+		average = totalTemp/pixelCount
+		return average
 
 	def calcPixelTemp(self,RGB):
 		R,G,B=RGB
 
 		#http://dsp.stackexchange.com/questions/8949/how-do-i-calculate-the-color-temperature-of-the-light-source-illuminating-an-ima
 		#Convert the RGB values to CIE tristimulus 3D color space coordinates
-		X = ((-0.14282) * B) + ((1.54924) * G) + ((-0.95641) * B)
+		X = ((-0.14282) * R) + ((1.54924) * G) + ((-0.95641) * B)
 		Y = ((-0.32466) * R) + ((1.57837) * G) + ((-0.73191) * B) #illuminance
 		Z = ((-0.68202) * R) + ((0.77073) * G) + (( 0.56332) * B)
 
@@ -131,7 +132,7 @@ class ProcessImage(object):
 		return CCT
 
 	def calcPixelDiff(self):
-		return abs(numPixels(self.screenWidth, self.screenHeight) - numPixels(self.imageWidth, self.imageHeight))
+		return numPixels(self.screenWidth, self.screenHeight) - numPixels(self.imageWidth, self.imageHeight)
 
 	def calcAspectDiff(self):
 		return abs(aspectRatio(self.screenWidth, self.screenHeight) - aspectRatio(self.imageWidth, self.imageHeight))
