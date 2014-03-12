@@ -79,6 +79,7 @@ class ProcessImage(object):
 		self.screenWidth, self.screenHeight = int(screen.split()[7]), int(screen.split()[9][:-1])
 
 	def calcImageScore(self):
+
 		score = 0.0
 		score += self.calcImageTemp() #Initially base score on average image temp
 
@@ -111,7 +112,10 @@ class ProcessImage(object):
 		return average
 
 	def calcPixelTemp(self,RGB):
-		R,G,B=RGB
+		if len(RGB) > 3 :
+			R,G,B,A = RGB
+		else:
+			R,G,B = RGB
 
 		#http://dsp.stackexchange.com/questions/8949/how-do-i-calculate-the-color-temperature-of-the-light-source-illuminating-an-ima
 		#Convert the RGB values to CIE tristimulus 3D color space coordinates
