@@ -1,0 +1,27 @@
+author: Dustin Raimondi, Chris Knepper, Lance Laughlin
+bin_dir: /media/sf_Entropy/Entropy/bin
+classifiers: []
+description: A tool to rate potential wallpapers
+directories: [/media/sf_Entropy/Entropy, /media/sf_Entropy/Entropy/bin, /media/sf_Entropy/Entropy/tests,
+  /media/sf_Entropy/Entropy/docs, /media/sf_Entropy/Entropy/Entropy]
+docs_dir: /media/sf_Entropy/Entropy/docs
+email: chris82thekid@gmail.com
+encoding: utf8
+files: [/media/sf_Entropy/Entropy/MANIFEST.in, /media/sf_Entropy/Entropy/setup.py,
+  /media/sf_Entropy/Entropy/Entropy/__init__.py, /media/sf_Entropy/Entropy/tests/__init__.py,
+  /media/sf_Entropy/Entropy/tests/Entropy_tests.py]
+init_file: null
+keywords: [color, wallpaper, images, image]
+license: GPLv3
+manifest: /media/sf_Entropy/Entropy/MANIFEST.in
+name: Entropy
+project_dir: /media/sf_Entropy/Entropy
+requires: [Pillow]
+setup_file: /media/sf_Entropy/Entropy/setup.py
+shortname: Entropy
+source_dir: /media/sf_Entropy/Entropy/Entropy
+test_file: /media/sf_Entropy/Entropy/tests/Entropy_tests.py
+test_init_file: /media/sf_Entropy/Entropy/tests/__init__.py
+tests_dir: /media/sf_Entropy/Entropy/tests
+url: http://www.github.com/ExplosiveHippo/Entropy
+version: 0.1.0
