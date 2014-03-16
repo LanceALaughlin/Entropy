@@ -6,7 +6,7 @@ from setuptools import setup
 version = "0.1.0"
 
 setup(
-    name="Entropy",
+    name="WallpaperEntropy",
     version=version,
     description="A tool to rate potential wallpapers",
     keywords="color wallpaper images image",
