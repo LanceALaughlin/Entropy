@@ -2,7 +2,7 @@
 import sys
 import os
 import getopt
-from PIL import Image, ImageStat
+from PIL import Image, ImageStat, ImageCms
 import urllib
 import cStringIO
 
@@ -32,8 +32,6 @@ def main(argv):
 	#Pull screen data from xrandr
 	global screen
 	screen = os.popen("xrandr -q -d :0").readlines()[0]
-
-	#Parse the arguments, then create a new image processor object with the value of the -i or --image argument as the image file to open
 	p = ProcessImage(_image)
 	p.output()
 
@@ -42,6 +40,14 @@ def aspectRatio(width, height):
 
 def numPixels(width, height):
 	return width * height
+
+#Return number mapped to range 0 to 10
+def normalizeNumber(x, xmin, xmax):
+	return (float((x - xmin)) / float((xmax - xmin))) * 10
+
+#Return number clamped to allowed min/max values
+def clampNumber(num, minimum, maximum):
+	 return min(max(minimum, num), maximum)
 
 #Print this help when run with the -h flag or when the user entered bad flags
 def usage():
@@ -64,7 +70,7 @@ class ProcessImage(object):
 		#determine if the image is local or hosted, then open it
 		if 'http' in self.source:
 			if(_verbose):
-				print 'reading from url'
+				print 'Reading from URL'
 			file = cStringIO.StringIO(urllib.urlopen(self.source).read())
 			self.image = Image.open(file)
 		else:
@@ -72,68 +78,60 @@ class ProcessImage(object):
 				self.image = Image.open(self.source)
 			except IOError:
 				print self.source
-				print "Cannot load image. Be sure to include 'http://'' if loading from a website"
+				print "Cannot load image. Be sure to include 'http://'' if loading from a website!"
 				sys.exit()
 
+		sRGB = ImageCms.createProfile("sRGB")
+		pLab = ImageCms.createProfile("LAB")
+		t = ImageCms.buildTransform(sRGB, pLab, "RGB", "LAB")
+		self.labImage = ImageCms.applyTransform(self.image, t)
 		self.imageWidth, self.imageHeight = self.image.size #Set width and height, which correspond to tuple values from self.image.size
 		self.screenWidth, self.screenHeight = int(screen.split()[7]), int(screen.split()[9][:-1])
+		self.lost_res = 0.0
+		self.lost_aspect = 0.0
+		self.temp_rating = self.calcAvgImageTemp()
+		self.final_rating = self.calcImageScore()
 
+	#Generate a score for the image
 	def calcImageScore(self):
-
 		score = 0.0
-		score += self.calcImageTemp() #Initially base score on average image temp
-
+		score += self.temp_rating #Initially base score on average image temp
 		#Factor in size differences
 		pixelDiff = self.calcPixelDiff()
 		aspectDiff = self.calcAspectDiff()
 		if(pixelDiff > 0): #Only take away points if the screen is a higher res than the image
 			i = pixelDiff
 			while(i > 0):
-				score -= 100 #For every pixel of difference there is between image and screen res, take away this many points
+				score -= 0.0001 #For every pixel of difference there is between image and screen res, take away this many points
+				self.lost_res += 0.0001
 				i -= 1
 		i = aspectDiff
 		while(i > 0):
-			score -= 1000 #For how big the difference in aspect ratio is, take away this many points
+			score -= 1 #For how big the difference in aspect ratio is, take away this many points
+			self.lost_aspect += 1
 			i -= 1
 
 		#Make sure we don't go below 0
 		score = max(0.0, score)
 		return round(score, 1) #Round to 1 decimal place
 
-	def calcImageTemp(self):
+	#Determine a color temperature score based on the temperature
+	#In Lab color, a higher L correlates to a brigher image
+	#higher a and b values correlate to warmer colors
+	def calcAvgImageTemp(self):
 		totalTemp = 0.0
-		pixelCount = 0.0
+		#We rate each pixel, combine the rating, and average it over the image dimensions for a mean rating
 		for row in range(self.imageWidth):
 			for col in range(self.imageHeight):
-				temp = self.calcPixelTemp(self.image.getpixel((row,col)))
-				totalTemp+= temp
-				pixelCount += 1.0
-		average = totalTemp/pixelCount
-		return average
-
-	def calcPixelTemp(self,RGB):
-		if len(RGB) > 3 :
-			R,G,B,A = RGB
-		else:
-			R,G,B = RGB
-
-		#http://dsp.stackexchange.com/questions/8949/how-do-i-calculate-the-color-temperature-of-the-light-source-illuminating-an-ima
-		#Convert the RGB values to CIE tristimulus 3D color space coordinates
-		X = ((-0.14282) * R) + ((1.54924) * G) + ((-0.95641) * B)
-		Y = ((-0.32466) * R) + ((1.57837) * G) + ((-0.73191) * B) #illuminance
-		Z = ((-0.68202) * R) + ((0.77073) * G) + (( 0.56332) * B)
-
-		#Compute the Combined Color Temperature
-		numerator =   ((0.23881) * R + ( 0.25499) * G + (-0.58291) * B)
-		denominator = ((0.11109) * R + (-0.85406) * G + ( 0.52289) * B)
-
-		if denominator == 0:
-			CCT=0
-		else:
-			n=numerator/denominator
-			CCT = (449 * (n**3)) + (3525 * (n**2) + (6823.3 * n) + 5520.33)
-
-		return CCT
+				pixel = self.labImage.getpixel((row,col))
+				#Certain colors when converted from RGB can go outside the L,a,b range, so we need to clamp them
+				L,a,b = pixel
+				L = normalizeNumber(clampNumber(L, 0, 100), 0, 100) / 3.333
+				a = normalizeNumber(clampNumber(a, -128, 127), -128, 127) / 3.333
+				b = normalizeNumber(clampNumber(b, -128, 127), -128, 127) / 3.333
+				totalTemp += (L + a + b) #The individual ratings for L, a, and b comprise 33.3% of each per-pixel rating
+				#Perhaps in the future, L could have a lower weight, since "brighter" doesn't always mean "warmer"
+		return totalTemp/(self.imageWidth * self.imageHeight) #Average per-pixel rating for image
 
 	def calcPixelDiff(self):
 		return numPixels(self.screenWidth, self.screenHeight) - numPixels(self.imageWidth, self.imageHeight)
@@ -148,20 +146,28 @@ class ProcessImage(object):
 			return "The image is at least as big as the screen resolution! :)"
 
 	def output(self):
+
+		if(self.final_rating < 4):
+			color = '\033[91m'
+		elif(self.final_rating < 7):
+			color = '\033[93m'
+		else:
+			color = '\033[92m'
+
 		if(_verbose):
 			print '\033[0m' + "We're processing the image:" + self.source
 			print '\033[0m' + "This", self.image.mode, "image is in the", self.image.format, "format"
 			print '\033[0m' + "Image Size:", self.imageWidth, ",", self.imageHeight
-
-			print '\033[95m' + "White: \tPixel (0,0) color temp:", self.calcPixelTemp(self.image.getpixel((0,0)))
-			print '\033[94m' + "Blue: \tPixel (0,1) color temp:", self.calcPixelTemp(self.image.getpixel((0,1)))
-			print '\033[91m' + "Red:\tPixel (1,0) color temp:", self.calcPixelTemp(self.image.getpixel((1,0)))
-			print '\033[93m' + "Black: \tPixel (1,1) color temp:", self.calcPixelTemp(self.image.getpixel((1,1)))
-			print "Average Image Temperature:", self.calcImageTemp()
 			print "Screen Resolution: width = " + str(self.screenWidth) + ", height = " + str(self.screenHeight)
-			print "Aspect ratio Comparison: " + str(self.calcAspectDiff())
+			print "Per-Pixel Average Image Temperature Rating:", self.temp_rating
+			print "Aspect ratio Difference: " + str(self.calcAspectDiff())
 			print "Screen Size vs. Image Size: " + self.compareScreenSize()
-		print "Image Score:", self.calcImageScore(),"/ 10"
+		
+		print "Image Score:", color, self.final_rating, "/ 10"
+
+		if(_verbose):
+			print "This image lost " + str(self.lost_res) + " points due to the resolution difference"
+			print "This image lost " + str(self.lost_aspect) + " points due to the aspect ratio difference"
 	
 
 #Python needs this to instantiate the program properly when it's executed from the command line
